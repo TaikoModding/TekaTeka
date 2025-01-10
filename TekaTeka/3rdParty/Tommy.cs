@@ -39,6 +39,8 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
+#pragma warning disable
+
 namespace Tommy
 {
 #region TOML Nodes
@@ -2114,3 +2116,5 @@ namespace Tommy
 
 #endregion
 }
+
+#pragma warning restore

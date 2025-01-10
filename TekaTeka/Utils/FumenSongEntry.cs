@@ -1,9 +1,11 @@
-﻿using System;
+﻿using Cysharp.Threading.Tasks;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TekaTeka.Plugins;
+using UnityEngine;
 
 namespace TekaTeka.Utils
 {
@@ -35,7 +37,8 @@ namespace TekaTeka.Utils
 
         public override string GetFilePath()
         {
-            string songPath = Path.Combine(CustomSongLoader.songsPath, this.songFile);
+            string songPath =
+                Path.Combine(CustomSongLoader.songsPath, this.modFolder, CustomSongLoader.SONGS_FOLDER, this.songFile);
             return songPath;
         }
 

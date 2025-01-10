@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -15,8 +15,7 @@
       SourceFiles="..\$(MSBuildProjectDir)\Resources\$(ModName).csproj.user"
       DestinationFiles=".\$(MSBuildProjectDir)\$(ModName).csproj.user" />
     <Message Text="path: $(GameDir)" />
-    <Error
-      Condition="$(GameDir)==''"
+    <Error Condition="$(GameDir)==''"
       Text="Set the GameDir variable in .csproj.user file to your Rhythm Festival executable directory." />
   </Target>
 
@@ -36,6 +35,10 @@
     <Reference Include="$(GameDir)\BepInEx\interop\*.dll" Private="false" />
     <PackageReference Include="BepInEx.Analyzers" Version="1.0.8" PrivateAssets="all" />
     <PackageReference Include="BepInEx.PluginInfoProps" Version="2.1.0" />
+    <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="NAudio.Core" Version="2.2.1" />
+    <PackageReference Include="NAudio.Vorbis" Version="1.5.0" />
+    <PackageReference Include="VGAudio" Version="2.2.1" />
     <ProjectReference Include="..\Libraries\tja2fumen\tja2fumen.csproj" />
     <Reference Include="$(SolutionDir)\Libraries\SonicAudioLib.dll" Private="false" />
   </ItemGroup>
@@ -43,10 +46,14 @@
   <Target Name="PostBuildCopy" AfterTargets="PostBuildEvent" Condition="$(CopyOutputFiles) == true">
     <Copy SourceFiles="$(TargetDir)$(AssemblyName).dll"
       DestinationFolder="$(GameDir)\BepInEx\plugins\$(AssemblyName)" />
+    <Copy SourceFiles="$(TargetDir)tja2fumen.dll"
+      DestinationFolder="$(GameDir)\BepInEx\plugins\$(AssemblyName)" />
     <Copy SourceFiles="$(SolutionDir)\Libraries\SonicAudioLib.dll"
       DestinationFolder="$(GameDir)\BepInEx\plugins\$(AssemblyName)" />
     <Copy Condition="$(DefineConstants.Contains('DEBUG'))"
       SourceFiles="$(TargetDir)$(AssemblyName).pdb"
+      DestinationFolder="$(GameDir)\BepInEx\plugins\$(AssemblyName)" />
+    <Copy Condition="$(DefineConstants.Contains('DEBUG'))" SourceFiles="$(TargetDir)tja2fumen.pdb"
       DestinationFolder="$(GameDir)\BepInEx\plugins\$(AssemblyName)" />
   </Target>
 

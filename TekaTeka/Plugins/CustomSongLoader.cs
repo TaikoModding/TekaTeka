@@ -2,9 +2,16 @@ using AsmResolver.Patching;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Cysharp.Threading.Tasks.Linq;
 using HarmonyLib;
+using Il2CppSystem.Net;
+using SRF;
 using System.Collections;
 using System.Text;
 using TekaTeka.Utils;
+using System.Runtime.Serialization;
+using Scripts.UserData;
+using System.Reflection;
+using Cysharp.Threading.Tasks;
+using Il2CppInterop.Runtime.InteropTypes.Arrays;
 
 namespace TekaTeka.Plugins
 {
@@ -170,10 +177,16 @@ namespace TekaTeka.Plugins
                 }
                 else
                 {
-                    bytes = Cryptgraphy.ReadAllAesBytes(originalFile, Cryptgraphy.AesKeyType.Type0);
+                    var request = Cryptgraphy.ReadAllAesBytesAsync(originalFile, Cryptgraphy.AesKeyType.Type0);
+                    while (!request.IsDone)
+                    {
+                        yield return null;
+                    }
+                    bytes = request.Bytes;
                 }
 
-                var cueSheet = CriAtom.AddCueSheet(player.CueSheetName, bytes, null, null);
+                var cueSheet = CriAtom.AddCueSheetAsync(player.CueSheetName, bytes, null, null);
+
                 player.CueSheet = cueSheet;
 
                 player.isLoadingAsync = false;

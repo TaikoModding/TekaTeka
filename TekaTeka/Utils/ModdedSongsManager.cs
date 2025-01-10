@@ -27,10 +27,17 @@ namespace TekaTeka.Utils
         public List<SongMod> GetMods()
         {
             List<SongMod> mods = new List<SongMod>();
+            AddFumenMods(mods);
+            AddTjaMods(mods);
+            return mods;
+        }
+
+        public void AddFumenMods(List<SongMod> mods)
+        {
             foreach (string path in Directory.GetDirectories(CustomSongLoader.songsPath))
             {
                 string folder = Path.GetFileName(path) ?? "";
-                if (folder != "")
+                if (folder != "" && folder != "TJAsongs")
                 {
                     FumenSongMod mod = new FumenSongMod(folder);
                     if (mod.enabled)
@@ -40,7 +47,23 @@ namespace TekaTeka.Utils
                     }
                 }
             }
-            return mods;
+        }
+
+        public void AddTjaMods(List<SongMod> mods)
+        {
+            foreach (string path in Directory.GetDirectories(Path.Combine(CustomSongLoader.songsPath, "TJAsongs")))
+            {
+                string folder = Path.GetFileName(path) ?? "";
+                if (folder != "")
+                {
+                    TjaSongMod mod = new TjaSongMod(folder);
+                    if (mod.enabled)
+                    {
+                        Logger.Log($"Mod {mod.name} Loaded", LogType.Info);
+                        mods.Add(mod);
+                    }
+                }
+            }
         }
 
         public void SetupMods()
