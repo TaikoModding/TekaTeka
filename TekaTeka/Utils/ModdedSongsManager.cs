@@ -1,6 +1,6 @@
-using System.Text;
+using Scripts.UserData;
+using Scripts.UserData.Flag;
 using TekaTeka.Plugins;
-using Tommy;
 
 namespace TekaTeka.Utils
 {
@@ -13,6 +13,10 @@ namespace TekaTeka.Utils
         public MusicDataInterface musicData => TaikoSingletonMonoBehaviour<DataManager>.Instance.MusicData;
         public InitialPossessionDataInterface initialPossessionData =>
             TaikoSingletonMonoBehaviour<DataManager>.Instance.InitialPossessionData;
+
+        public List<SongMod> modsEnabled = new List<SongMod>();
+
+        public int tjaSongs = 0;
 
         public ModdedSongsManager()
         {
@@ -56,11 +60,12 @@ namespace TekaTeka.Utils
                 string folder = Path.GetFileName(path) ?? "";
                 if (folder != "")
                 {
-                    TjaSongMod mod = new TjaSongMod(folder);
+                    TjaSongMod mod = new TjaSongMod(folder, 3000 + tjaSongs);
                     if (mod.enabled)
                     {
                         Logger.Log($"Mod {mod.name} Loaded", LogType.Info);
                         mods.Add(mod);
+                        tjaSongs++;
                     }
                 }
             }
@@ -74,6 +79,7 @@ namespace TekaTeka.Utils
                 if (mod.enabled)
                 {
                     mod.AddMod(this);
+                    modsEnabled.Add(mod);
                 }
             }
         }
@@ -104,6 +110,33 @@ namespace TekaTeka.Utils
             {
                 return null;
             }
+        }
+
+        public UserData FilterModdedData(UserData userData)
+        {
+
+            foreach (SongMod mod in this.modsEnabled)
+            {
+                if (mod is TjaSongMod)
+                {
+                    mod.SaveUserData(userData);
+                }
+            }
+
+            Scripts.UserData.MusicInfoEx[] datas = userData.MusicsData.Datas;
+            UserFlagDataDefine.FlagData[] flags1 =
+                userData.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.Song];
+            UserFlagDataDefine.FlagData[] flags2 =
+                userData.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.TitleSongId];
+
+            Array.Resize(ref datas, 3000);
+            Array.Resize(ref flags1, 3000);
+            Array.Resize(ref flags2, 3000);
+
+            userData.MusicsData.Datas = datas;
+            userData.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.Song] = flags1;
+            userData.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.TitleSongId] = flags2;
+            return userData;
         }
     }
 }

@@ -1,10 +1,5 @@
-﻿using Il2CppSystem.Xml;
-using Scripts.UserData;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Scripts.UserData;
 using System.Text;
-using System.Threading.Tasks;
 using TekaTeka.Plugins;
 using Tommy;
 
@@ -126,11 +121,6 @@ namespace TekaTeka.Utils
             return true;
         }
 
-        public override string GetModFolder()
-        {
-            return this.modFolder;
-        }
-
         public override SongEntry GetSongEntry(string id, bool idIsSongFile = false)
         {
             if (idIsSongFile)
@@ -178,6 +168,16 @@ namespace TekaTeka.Utils
                 }
             }
             Logger.Log($"{songsAdded} out of {this.songList.Count} songs were added from mod \"{this.modName}\"");
+        }
+
+        public override void SaveUserData(UserData userData)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Scripts.UserData.MusicInfoEx LoadUserData()
+        {
+            throw new NotImplementedException();
         }
     }
 }

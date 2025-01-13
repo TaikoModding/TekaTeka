@@ -1,17 +1,10 @@
-using AsmResolver.Patching;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
-using Cysharp.Threading.Tasks.Linq;
 using HarmonyLib;
-using Il2CppSystem.Net;
-using SRF;
 using System.Collections;
 using System.Text;
 using TekaTeka.Utils;
-using System.Runtime.Serialization;
 using Scripts.UserData;
-using System.Reflection;
-using Cysharp.Threading.Tasks;
-using Il2CppInterop.Runtime.InteropTypes.Arrays;
+using Il2CppSystem.Security.Cryptography;
 
 namespace TekaTeka.Plugins
 {
@@ -26,6 +19,8 @@ namespace TekaTeka.Plugins
 
         static List<MusicDataInterface.MusicInfo> customSongsList = new List<MusicDataInterface.MusicInfo>();
 
+        static CommonObjects commonObjects => TaikoSingletonMonoBehaviour<CommonObjects>.Instance;
+
         static ModdedSongsManager songsManager;
 
         public static void InitializeLoader()
@@ -35,6 +30,16 @@ namespace TekaTeka.Plugins
                 Directory.CreateDirectory(songsPath);
             }
         }
+
+#if DEBUG
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(UnityEngine.Logger), nameof(UnityEngine.Logger.LogException))]
+        [HarmonyPatch(new Type[] { typeof(Il2CppSystem.Exception), typeof(UnityEngine.Object) })]
+        static void DemistifyStackTrace(Il2CppSystem.Exception exception, UnityEngine.Object context)
+        {
+            Logger.Log(exception.GetStackTrace(true));
+        }
+#endif
 
 #region Append Custom Songs DB
 
@@ -47,6 +52,111 @@ namespace TekaTeka.Plugins
                 return;
             }
             songsManager = new ModdedSongsManager();
+        }
+
+#endregion
+
+#region Custom Save Data
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(ApplicationUserDataSave._SaveAsync_d__21),
+                      nameof(ApplicationUserDataSave._SaveAsync_d__21.MoveNext))]
+        public static void PatchSave(ref ApplicationUserDataSave._SaveAsync_d__21 __instance)
+        {
+            if (__instance.__1__state == 0)
+            {
+                var userData = __instance.__4__this.data;
+
+                var backup = new Scripts.UserData.MusicInfoEx[userData.MusicsData.Datas.Length];
+
+                userData.MusicsData.Datas.CopyTo(backup, 0);
+                userData = songsManager.FilterModdedData(userData);
+
+                var xml = XmlSerializerBehaviour.Serializer(userData);
+
+                xml = Cryptgraphy.EncryptValueC(xml);
+
+                var dataSize = System.BitConverter.GetBytes(xml.Length);
+
+                var sha256Data = Cryptgraphy.GetHashByte<SHA256CryptoServiceProvider>(xml);
+
+                xml = Cryptgraphy.CompositData(dataSize, sha256Data, xml);
+
+                __instance._compositionData_5__2 = xml;
+
+                commonObjects.Platform.Save.SaveAsync(__instance._compositionData_5__2);
+
+                Scripts.UserData.MusicInfoEx[] datas = userData.MusicsData.Datas;
+                Array.Resize(ref datas, backup.Length);
+                Array.Copy(backup, 3000, datas, 3000, backup.Length - 3000);
+                userData.MusicsData.Datas = datas;
+
+                TaikoSingletonMonoBehaviour<SaveIcon>.Instance.Deactive();
+                __instance.__1__state = 2;
+                __instance._compositionData_5__2 = null;
+            }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(Scripts.UserData.UserData), nameof(Scripts.UserData.UserData.FixData))]
+        static void PatchLoad(ref Scripts.UserData.UserData __instance)
+        {
+            int oldLen = __instance.MusicsData.Datas.Length;
+            int newLen = __instance.MusicsData.Datas.Length + songsManager.tjaSongs;
+
+            Scripts.UserData.MusicInfoEx[] newArray = __instance.MusicsData.Datas;
+
+            Scripts.UserData.Flag.UserFlagDataDefine.FlagData[] songArray =
+                __instance.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.Song].ToArray();
+            Scripts.UserData.Flag.UserFlagDataDefine.FlagData[] tittleSongArray =
+                __instance.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.TitleSongId]
+                    .ToArray();
+
+            Array.Resize(ref newArray, newLen);
+            Array.Resize(ref songArray, newLen);
+            Array.Resize(ref tittleSongArray, newLen);
+            for (int i = 3000; i < newLen; i++)
+            {
+                newArray[i] = new Scripts.UserData.MusicInfoEx();
+
+                newArray[i].SetDefault();
+            }
+
+            foreach (SongMod mod in songsManager.modsEnabled)
+            {
+                if (mod is TjaSongMod)
+                {
+                    TjaSongMod tjaMod = (TjaSongMod)mod;
+                    int uniqueId = tjaMod.uniqueId;
+                    var musicData = __instance.MusicsData;
+
+                    __instance.MusicsData = musicData;
+                    try
+                    {
+
+                        var musicInfo = tjaMod.LoadUserData();
+
+                        newArray[uniqueId] = musicInfo;
+                    }
+                    catch (Exception e)
+                    {
+                        var musicInfo = new Scripts.UserData.MusicInfoEx();
+                        musicInfo.SetDefault();
+                        newArray[uniqueId] = musicInfo;
+                    }
+
+                    songArray[uniqueId] =
+                        new Scripts.UserData.Flag.UserFlagDataDefine.FlagData() { Id = tjaMod.uniqueId };
+                    tittleSongArray[uniqueId] =
+                        new Scripts.UserData.Flag.UserFlagDataDefine.FlagData() { Id = tjaMod.uniqueId };
+                }
+            }
+
+            __instance.MusicsData.Datas = newArray;
+
+            __instance.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.Song] = songArray;
+            __instance.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.TitleSongId] =
+                tittleSongArray;
         }
 
 #endregion

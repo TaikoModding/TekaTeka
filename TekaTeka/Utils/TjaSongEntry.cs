@@ -1,6 +1,4 @@
-﻿using TekaTeka.Plugins;
-using System.IO.Compression;
-using AsmResolver.PE.DotNet.Metadata;
+using TekaTeka.Plugins;
 
 namespace TekaTeka.Utils
 {
@@ -8,10 +6,10 @@ namespace TekaTeka.Utils
     {
         string modFolder;
         string modPath;
-        static int id = 5900;
+
         tja2fumen.TJASong song;
 
-        public TjaSongEntry(string modFolder)
+        public TjaSongEntry(string modFolder, int id)
         {
             this.modFolder = modFolder;
             this.modPath = Path.Combine(CustomSongLoader.songsPath, "TJAsongs", this.modFolder);
@@ -69,24 +67,7 @@ namespace TekaTeka.Utils
                 }
             }
 
-            foreach (var property in typeof(DataConst).GetProperties())
-            {
-                var getMethod = property.GetGetMethod();
-                if (getMethod != null)
-                {
-
-                    if (getMethod.IsStatic)
-                    {
-
-                        Logger.Log($"{property.Name} : {property.GetValue(null)}");
-                    }
-                }
-            }
-            DataConst.MusicMax = 6000;
-            DataConst.FumenIdMax = 6000;
-            DataConst.BasicMusicMax = 6000;
             musicInfo.UniqueId = id;
-            id++;
             musicInfo.Id = songHash.ToString();
         }
 
@@ -147,9 +128,9 @@ namespace TekaTeka.Utils
             }
             else
             {
-
                 offset = (int)((60 / this.song.bpm * 1000) * 4);
             }
+
             var acbPath = Path.Combine(this.modPath, acbFile);
             string songFilePath = Path.Combine(this.modPath, this.song.metadata.wave);
             tja2fumen.TJAConvert.FileType fileType;
