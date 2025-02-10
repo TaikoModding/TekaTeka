@@ -143,7 +143,7 @@ namespace TekaTeka.Utils
             for (int i = 0; i < this.songList.Count; i++)
             {
                 MusicDataInterface.MusicInfo song = this.songList[i];
-                if (!manager.currentSongs.Contains(song.UniqueId))
+                if (manager.GetModPath(song.UniqueId) == null)
                 { 
                     songsAdded++;
 

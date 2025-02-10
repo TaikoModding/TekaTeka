@@ -7,11 +7,11 @@ namespace TekaTeka.Utils
 {
     internal class ModdedSongsManager
     {
-        public HashSet<int> currentSongs = new HashSet<int>();
-        public Dictionary<int, SongMod> uniqueIdToMod = new Dictionary<int, SongMod>();
-        public Dictionary<string, SongMod> idToMod = new Dictionary<string, SongMod>();
-        public Dictionary<string, SongMod> songFileToMod = new Dictionary<string, SongMod>();
-        public List<MusicDataInterface.MusicInfo> musicInfos = new List<MusicDataInterface.MusicInfo>();
+        private HashSet<int> currentSongs = new HashSet<int>();
+        private Dictionary<int, SongMod> uniqueIdToMod = new Dictionary<int, SongMod>();
+        private Dictionary<string, SongMod> idToMod = new Dictionary<string, SongMod>();
+        private Dictionary<string, SongMod> songFileToMod = new Dictionary<string, SongMod>();
+        private List<MusicDataInterface.MusicInfo> musicInfos = new List<MusicDataInterface.MusicInfo>();
 
         public MusicDataInterface musicData => TaikoSingletonMonoBehaviour<DataManager>.Instance.MusicData;
         public InitialPossessionDataInterface initialPossessionData =>
