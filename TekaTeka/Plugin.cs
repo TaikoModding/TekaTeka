@@ -15,7 +15,7 @@ namespace TekaTeka
     {
         public const string PluginGuid = "RF.TekaTeka";
         public const string ModName = "TekaTeka";
-        public const string ModVersion = "1.2.1";
+        public const string ModVersion = "1.2.2";
 
         public static Plugin Instance;
         private Harmony _harmony = null;

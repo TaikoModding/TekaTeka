@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ModName>TekaTeka</ModName>
-    <ModVersion>1.2.1</ModVersion>
+    <ModVersion>1.2.2</ModVersion>
     <Description>A Rhythm Festival Custom Song Loader</Description>
   </PropertyGroup>
 
