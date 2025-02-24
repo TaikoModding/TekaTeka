@@ -132,7 +132,7 @@ namespace TekaTeka.Utils
             else
             {
                 SongEntry songEntry = this.chartFileToEntry[id.Split('_')[0]];
-                songEntry.songFile = id;
+                songEntry.SongFile = id;
                 return songEntry;
             }
         }

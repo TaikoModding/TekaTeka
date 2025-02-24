@@ -21,7 +21,7 @@ namespace TekaTeka.Utils
 
         public int tjaSongs = 0;
 
-        public ModdedSongsManager()
+        public void Initialize()
         {
 
             foreach (MusicDataInterface.MusicInfoAccesser accesser in musicData.MusicInfoAccesserList)
@@ -66,7 +66,6 @@ namespace TekaTeka.Utils
 
         public void AddTjaMods(List<SongMod> mods)
         {
-            //
             foreach (TjaSongMod.Genre genre in Enum.GetValues(typeof(TjaSongMod.Genre)))
             {
                 string genrePath =
@@ -99,21 +98,37 @@ namespace TekaTeka.Utils
             }
         }
 
-        public void RetainMusicInfo(MusicDataInterface.MusicInfo musicInfo, SongMod mod) {
+        public void RetainMusicInfo(MusicDataInterface.MusicInfo musicInfo, SongMod mod)
+        {
             this.currentSongs.Add(musicInfo.UniqueId);
             this.songFileToMod.Add(musicInfo.SongFileName, mod);
             this.uniqueIdToMod.Add(musicInfo.UniqueId, mod);
             this.idToMod.Add(musicInfo.Id, mod);
             this.musicInfos.Add(musicInfo);
-            this.initialPossessionData.InitialPossessionInfoAccessers.Add(
-                new InitialPossessionDataInterface.InitialPossessionInfoAccessor(
-                    (int)InitialPossessionDataInterface.RewardTypes.Song, musicInfo.UniqueId));
         }
 
-        public void PublishSongs() {
-            for (int i = 0; i < this.musicInfos.Count; i++) {
+        public void PublishSongs()
+        {
+            // Make a lookup list of known accessers so we only add new ones.
+            // This can be called multiple times while the game is running, so
+            // we don't want the list to grow without bounds.
+            var accessers = initialPossessionData.InitialPossessionInfoAccessers;
+            HashSet<int> ids = [];
+            foreach (var accesser in accessers)
+            {
+                ids.Add(accesser.Id);
+            }
+
+            for (int i = 0; i < this.musicInfos.Count; i++)
+            {
                 var tmp = this.musicInfos[i];
                 this.musicData.AddMusicInfo(ref tmp);
+                if (!ids.Contains(tmp.UniqueId))
+                {
+                    initialPossessionData.InitialPossessionInfoAccessers.Add(
+                        new InitialPossessionDataInterface.InitialPossessionInfoAccessor(
+                            (int)InitialPossessionDataInterface.RewardTypes.Song, tmp.UniqueId));
+                }
             }
         }
 
@@ -144,10 +159,7 @@ namespace TekaTeka.Utils
             {
                 return this.uniqueIdToMod[uniqueId];
             }
-            else
-            {
-                return null;
-            }
+            return null;
         }
 
         public SongMod? GetModPath(string songFileName)
@@ -160,10 +172,7 @@ namespace TekaTeka.Utils
             {
                 return this.idToMod[songFileName];
             }
-            else
-            {
-                return null;
-            }
+            return null;
         }
 
         public UserData FilterModdedData(UserData userData)

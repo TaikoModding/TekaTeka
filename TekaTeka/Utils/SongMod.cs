@@ -175,8 +175,8 @@ namespace TekaTeka.Utils
     internal abstract class SongMod
     {
         public bool enabled { get; set; }
-        public string name { get; set; }
-        protected string modFolder { get; set; }
+        public string name { get; set; } = "";
+        protected string modFolder { get; set; } = "";
 
         public abstract void AddMod(ModdedSongsManager manager);
 

@@ -10,13 +10,9 @@
   </PropertyGroup>
 
   <Target Name="UserFile" AfterTargets="PreBuildEvent">
-    <Copy
-      Condition="!Exists('.\$(MSBuildProjectDir)\$(ModName).csproj.user') And '$(GameDir)' == ''"
-      SourceFiles="..\$(MSBuildProjectDir)\Resources\$(ModName).csproj.user"
-      DestinationFiles=".\$(MSBuildProjectDir)\$(ModName).csproj.user" />
+    <Copy Condition="!Exists('.\$(MSBuildProjectDir)\$(ModName).csproj.user') And '$(GameDir)' == ''" SourceFiles="..\$(MSBuildProjectDir)\Resources\$(ModName).csproj.user" DestinationFiles=".\$(MSBuildProjectDir)\$(ModName).csproj.user" />
     <Message Text="path: $(GameDir)" />
-    <Error Condition="$(GameDir)==''"
-      Text="Set the GameDir variable in .csproj.user file to your Rhythm Festival executable directory." />
+    <Error Condition="$(GameDir)==''" Text="Set the GameDir variable in .csproj.user file to your Rhythm Festival executable directory." />
   </Target>
 
   <PropertyGroup>
@@ -28,6 +24,10 @@
     <PackageId>$(ModName)</PackageId>
     <PackageVersion>$(ModVersion)</PackageVersion>
     <Platforms>AnyCPU</Platforms>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <NoWarn>1701;1702;NU1603;BepInEx002</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -44,17 +44,11 @@
   </ItemGroup>
 
   <Target Name="PostBuildCopy" AfterTargets="PostBuildEvent" Condition="$(CopyOutputFiles) == true">
-    <Copy SourceFiles="$(TargetDir)$(AssemblyName).dll"
-      DestinationFolder="$(GameDir)\BepInEx\plugins\$(AssemblyName)" />
-    <Copy SourceFiles="$(TargetDir)tja2fumen.dll"
-      DestinationFolder="$(GameDir)\BepInEx\plugins\$(AssemblyName)" />
-    <Copy SourceFiles="$(SolutionDir)\Libraries\SonicAudioLib.dll"
-      DestinationFolder="$(GameDir)\BepInEx\plugins\$(AssemblyName)" />
-    <Copy Condition="$(DefineConstants.Contains('DEBUG'))"
-      SourceFiles="$(TargetDir)$(AssemblyName).pdb"
-      DestinationFolder="$(GameDir)\BepInEx\plugins\$(AssemblyName)" />
-    <Copy Condition="$(DefineConstants.Contains('DEBUG'))" SourceFiles="$(TargetDir)tja2fumen.pdb"
-      DestinationFolder="$(GameDir)\BepInEx\plugins\$(AssemblyName)" />
+    <Copy SourceFiles="$(TargetDir)$(AssemblyName).dll" DestinationFolder="$(GameDir)\BepInEx\plugins\$(AssemblyName)" />
+    <Copy SourceFiles="$(TargetDir)tja2fumen.dll" DestinationFolder="$(GameDir)\BepInEx\plugins\$(AssemblyName)" />
+    <Copy SourceFiles="$(SolutionDir)\Libraries\SonicAudioLib.dll" DestinationFolder="$(GameDir)\BepInEx\plugins\$(AssemblyName)" />
+    <Copy Condition="$(DefineConstants.Contains('DEBUG'))" SourceFiles="$(TargetDir)$(AssemblyName).pdb" DestinationFolder="$(GameDir)\BepInEx\plugins\$(AssemblyName)" />
+    <Copy Condition="$(DefineConstants.Contains('DEBUG'))" SourceFiles="$(TargetDir)tja2fumen.pdb" DestinationFolder="$(GameDir)\BepInEx\plugins\$(AssemblyName)" />
   </Target>
 
 </Project>

@@ -4,7 +4,6 @@ namespace TekaTeka.Utils
 {
     internal class FumenSongEntry : SongEntry
     {
-        bool isEncrypted;
         string modFolder;
 
         public FumenSongEntry(string modFolder, MusicDataInterface.MusicInfo musicInfo)
@@ -17,7 +16,7 @@ namespace TekaTeka.Utils
         {
 
             string songPath =
-                Path.Combine(CustomSongLoader.songsPath, this.modFolder, CustomSongLoader.CHARTS_FOLDER, this.songFile);
+                Path.Combine(CustomSongLoader.songsPath, this.modFolder, CustomSongLoader.CHARTS_FOLDER, this.SongFile);
             if (File.Exists(songPath + ".fumen"))
             {
                 return File.ReadAllBytes(songPath + ".fumen");
@@ -31,7 +30,7 @@ namespace TekaTeka.Utils
         public override string GetFilePath()
         {
             string songPath =
-                Path.Combine(CustomSongLoader.songsPath, this.modFolder, CustomSongLoader.SONGS_FOLDER, this.songFile);
+                Path.Combine(CustomSongLoader.songsPath, this.modFolder, CustomSongLoader.SONGS_FOLDER, this.SongFile);
             return songPath;
         }
 

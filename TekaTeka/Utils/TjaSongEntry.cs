@@ -1,3 +1,4 @@
+using AsmResolver.Patching;
 using TekaTeka.Plugins;
 using tja2fumen;
 
@@ -44,7 +45,9 @@ namespace TekaTeka.Utils
 
             uint songHash = _3rdParty.MurmurHash2.Hash(File.ReadAllBytes(this.tjaPath)) & 0xFFFF_FFF;
 
-            this.musicInfo = new MusicDataInterface.MusicInfo { SongNameJP = this.song.metadata.titleJA,
+            this.musicInfo = new MusicDataInterface.MusicInfo { UniqueId = id,
+                                                                Id = songHash.ToString(),
+                                                                SongNameJP = this.song.metadata.titleJA,
                                                                 SongNameEN = this.song.metadata.titleEN,
                                                                 SongNameKO = this.song.metadata.titleKO,
                                                                 SongNameCN = this.song.metadata.titleCN,
@@ -102,9 +105,6 @@ namespace TekaTeka.Utils
                     starProperty.SetValue(musicInfo, song.courses.ContainsKey(branch) ? song.courses[branch].level : 0);
                 }
             }
-
-            musicInfo.UniqueId = id;
-            musicInfo.Id = songHash.ToString();
         }
 
         public override string GetFilePath()
@@ -119,7 +119,7 @@ namespace TekaTeka.Utils
 
         public override byte[] GetFumenBytes()
         {
-            string diff = this.songFile.Split('_')[1];
+            string diff = this.SongFile.Split('_')[1];
             string ? tjaDiff;
             tja2fumen.Constants.COURSE_IDS_REVERSE.TryGetValue(diff, out tjaDiff);
             if (tjaDiff == null)
@@ -161,6 +161,16 @@ namespace TekaTeka.Utils
             var directory = Path.GetDirectoryName(this.modFolderPath);
 
             string acbFile = Path.GetFileNameWithoutExtension(this.song.metadata.wave) + ".acb";
+
+            byte[] bytes = [];
+
+            // Sometimes while debugging TJAs, there is no sound file associated. Just return silence
+            // rather than crash.
+            if (this.song.metadata.wave == "")
+            {
+                return bytes;
+            }
+
             int offset;
             if (isPreview)
             {
@@ -193,9 +203,9 @@ namespace TekaTeka.Utils
 
             if (tja2fumen.TJAConvert.ConvertToAcb(this.wavePath, fileType, isPreview, offset))
             {
-                return File.ReadAllBytes(acbPath);
+                bytes = File.ReadAllBytes(acbPath);
             }
-            return null;
+            return bytes;
         }
     }
 }
