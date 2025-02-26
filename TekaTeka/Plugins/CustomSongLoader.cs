@@ -250,31 +250,17 @@ namespace TekaTeka.Plugins
         [HarmonyPatch(typeof(FumenDivisionManager), nameof(FumenDivisionManager.Load))]
         static bool ReadSongPracticeDivision_Prefix(FumenDivisionManager __instance, ref string musicuid)
         {
-            string originalFile =
-                Path.Combine(UnityEngine.Application.streamingAssetsPath, PRACTICE_DIVISIONS_FOLDER, musicuid + ".bin");
-
             SongMod? mod = songsManager.GetModPath(musicuid);
-            string modName = mod != null ? mod.GetModFolder() : "";
 
-            string filePath = Path.Combine(songsPath, modName, PRACTICE_DIVISIONS_FOLDER, musicuid);
-            if (File.Exists(originalFile) || (!File.Exists(filePath + ".bin") && !File.Exists(filePath + ".csv")))
+            if (mod == null)
             {
                 return true;
-            };
-
-            bool isEncrypted = File.Exists(filePath + ".bin") && !File.Exists(filePath + ".csv");
-
-            string csvString;
-
-            if (isEncrypted)
-            {
-                var bytes = Cryptgraphy.ReadAllAesAndGZipBytes(filePath + ".bin", Cryptgraphy.AesKeyType.Type2);
-                csvString = Encoding.UTF8.GetString(bytes);
             }
-            else
-            {
-                csvString = File.ReadAllText(filePath + ".csv");
-            }
+
+            var song = mod.GetSongEntry(musicuid);
+
+            string csvString = song.GetSongDivisions();
+
             var datas = __instance.loader_.CreateDivisionData(csvString);
             __instance.datas_ = datas;
             __instance.IsLoadFinished = true;

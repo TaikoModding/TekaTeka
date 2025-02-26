@@ -1,4 +1,4 @@
-﻿namespace TekaTeka.Utils
+namespace TekaTeka.Utils
 {
     internal abstract class SongEntry
     {
@@ -9,6 +9,8 @@
         public abstract byte[] GetFumenBytes();
 
         public abstract byte[] GetSongBytes(bool isPreview = false);
+
+        public abstract string GetSongDivisions();
 
         public abstract string GetFilePath();
     }
