@@ -6,6 +6,7 @@ using TekaTeka.Utils;
 using Scripts.UserData;
 using Il2CppSystem.Security.Cryptography;
 using static MusicDataInterface;
+using System.Xml;
 
 namespace TekaTeka.Plugins
 {
@@ -69,14 +70,44 @@ namespace TekaTeka.Plugins
         {
             if (__instance.__1__state == 0)
             {
-                var userData = __instance.__4__this.data;
+                XmlDocument xmlDocument = new XmlDocument();
 
-                var backup = new Scripts.UserData.MusicInfoEx[userData.MusicsData.Datas.Length];
+                var xmlstring = XmlSerializerBehaviour.Serializer(__instance.__4__this.data, false);
 
-                userData.MusicsData.Datas.CopyTo(backup, 0);
-                userData = songsManager.FilterModdedData(userData);
+                // For some reason, XmlSerializerBehaviour.Serializer introduces a " at the first character
+                xmlDocument.LoadXml(xmlstring[1..]);
 
-                var xml = XmlSerializerBehaviour.Serializer(userData);
+                XmlElement? userData = xmlDocument["UserData"];
+                if (userData == null)
+                {
+                    return;
+                }
+
+                songsManager.FilterModdedData(userData);
+
+                var stringWriter = new StringWriter();
+                using (var xmlTextWriter = XmlWriter.Create(stringWriter, new XmlWriterSettings { Indent = true }))
+                {
+
+                    xmlDocument.WriteTo(xmlTextWriter);
+                    xmlTextWriter.Flush();
+                }
+
+                var xmlbytes = Encoding.UTF8.GetBytes(stringWriter.GetStringBuilder().ToString());
+                byte[] xml;
+
+                MemoryStream managedStream = new MemoryStream();
+
+                // Using the Managed DeflateStream causes the file to be a bit larger and it messes the save
+                Il2CppSystem.IO.MemoryStream compressedStream = new Il2CppSystem.IO.MemoryStream();
+
+                Il2CppSystem.IO.Compression.DeflateStream deflateStream = new Il2CppSystem.IO.Compression.DeflateStream(
+                    compressedStream, Il2CppSystem.IO.Compression.CompressionMode.Compress, true);
+
+                deflateStream.Write(xmlbytes, 0, xmlbytes.Length);
+                deflateStream.Close();
+
+                xml = compressedStream.ToArray();
 
                 xml = Cryptgraphy.EncryptValueC(xml);
 
@@ -89,11 +120,6 @@ namespace TekaTeka.Plugins
                 __instance._compositionData_5__2 = xml;
 
                 commonObjects.Platform.Save.SaveAsync(__instance._compositionData_5__2);
-
-                Scripts.UserData.MusicInfoEx[] datas = userData.MusicsData.Datas;
-                Array.Resize(ref datas, backup.Length);
-                Array.Copy(backup, 3000, datas, 3000, backup.Length - 3000);
-                userData.MusicsData.Datas = datas;
 
                 TaikoSingletonMonoBehaviour<SaveIcon>.Instance.Deactive();
                 __instance.__1__state = 2;
