@@ -52,3 +52,5 @@ jobs:
           path: |
             ./TekaTeka/bin/Release/net6.0/RF.TekaTeka.dll
             ./TekaTeka/bin/Release/net6.0/RF.TekaTeka.pdb
+            ./TekaTeka/bin/Release/net6.0/tja2fumen.dll
+            ./TekaTeka/bin/Release/net6.0/tja2fumen.pdb
