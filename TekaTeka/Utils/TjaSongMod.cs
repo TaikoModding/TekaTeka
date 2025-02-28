@@ -1,6 +1,7 @@
-﻿using Scripts.UserData;
+using Scripts.UserData;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Xml;
 using TekaTeka.Plugins;
 using Tommy;
 
@@ -113,9 +114,9 @@ namespace TekaTeka.Utils
             return this.song;
         }
 
-        public override void SaveUserData(UserData userData)
+        public override void SaveUserData(XmlElement userData)
         {
-            if (this.uniqueId > userData.MusicsData.Datas.Length)
+            if (this.uniqueId > userData["MusicsData"]?["Datas"]?.ChildNodes.Count)
             {
                 return;
             }
@@ -123,14 +124,19 @@ namespace TekaTeka.Utils
             uint songHash = _3rdParty.MurmurHash2.Hash(File.ReadAllBytes(this.tjaPath));
 
             var cleanedScore = new CleanMusicInfoEx();
-
-            cleanedScore.FromMusicInfoEx(userData.MusicsData, this.uniqueId);
+            XmlNode? node = userData["MusicsData"]?["Datas"]?.ChildNodes[this.uniqueId];
+            if (node != null)
+            {
+                cleanedScore.FromMusicInfoEx(node);
+            }
             JsonSerializerOptions jsonConfig = new JsonSerializerOptions();
             jsonConfig.IncludeFields = true;
             jsonConfig.WriteIndented = true;
 
             string jsonString = JsonSerializer.Serialize(
-                cleanedScore, new JsonSerializerOptions { IncludeFields = true, WriteIndented = true });
+                cleanedScore,
+                new JsonSerializerOptions { IncludeFields = true, WriteIndented = true,
+                                            Converters = { new JsonConverters.EnsoRecordArrayConverter() } });
 
             JsonObject save = new JsonObject();
             save["SongHash"] = songHash.ToString("X");
@@ -141,7 +147,6 @@ namespace TekaTeka.Utils
 
         public override Scripts.UserData.MusicInfoEx LoadUserData()
         {
-            // string jsonPath = Path.Combine(CustomSongLoader.songsPath, "TJAsongs", this.modFolder, "saves.json");
             if (!File.Exists(this.savesPath))
             {
                 var newMusicInfo = new Scripts.UserData.MusicInfoEx();
@@ -160,8 +165,10 @@ namespace TekaTeka.Utils
                 return newMusicInfo;
             }
 
-            var cleanMusicInfo = JsonSerializer.Deserialize<CleanMusicInfoEx>(
-                json["musicData"], new JsonSerializerOptions { IncludeFields = true });
+            var cleanMusicInfo =
+                JsonSerializer.Deserialize<CleanMusicInfoEx>(json["musicData"], new JsonSerializerOptions {
+                    IncludeFields = true, Converters = { new JsonConverters.EnsoRecordArrayConverter() }
+                });
 
             return cleanMusicInfo.ToMusicInfoEx();
         }
