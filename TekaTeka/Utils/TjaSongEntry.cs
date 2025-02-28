@@ -159,6 +159,24 @@ namespace TekaTeka.Utils
             }
         }
 
+        public override string GetSongDivisions()
+        {
+            List<FumenCourse> courses = new List<FumenCourse>();
+            TJASong tjaSong = tja2fumen.Parsers.ParseTja(this.GetFilePath());
+            foreach (var course in tjaSong.courses)
+            {
+                var fumenCourse = tja2fumen.Converters.ConvertTjaToFumen(course.Value);
+                if (fumenCourse != null)
+                {
+                    tja2fumen.Converters.FixDkNoteTypesCourse(fumenCourse);
+                    courses.Add(fumenCourse);
+                }
+            }
+            var csv = tja2fumen.FumenCSV.GenerateCsv(courses, this.musicInfo.Id, this.wavePath);
+
+            return csv;
+        }
+
         public override byte[] GetSongBytes(bool isPreview = false)
         {
             var directory = Path.GetDirectoryName(this.modFolderPath);

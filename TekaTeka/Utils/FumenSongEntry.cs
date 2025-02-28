@@ -1,4 +1,5 @@
-﻿using TekaTeka.Plugins;
+using System.Text;
+using TekaTeka.Plugins;
 
 namespace TekaTeka.Utils
 {
@@ -33,6 +34,32 @@ namespace TekaTeka.Utils
             string songPath =
                 Path.Combine(CustomSongLoader.songsPath, this.modFolder, CustomSongLoader.SONGS_FOLDER, this.songFile);
             return songPath;
+        }
+
+        public override string GetSongDivisions()
+        {
+            string filePath = Path.Combine(CustomSongLoader.songsPath, this.modFolder,
+                                           CustomSongLoader.PRACTICE_DIVISIONS_FOLDER, this.songFile);
+            if (!File.Exists(filePath + ".bin") && !File.Exists(filePath + ".csv"))
+            {
+                return "";
+            };
+
+            bool isEncrypted = File.Exists(filePath + ".bin") && !File.Exists(filePath + ".csv");
+
+            string csvString;
+
+            if (isEncrypted)
+            {
+                var bytes = Cryptgraphy.ReadAllAesAndGZipBytes(filePath + ".bin", Cryptgraphy.AesKeyType.Type2);
+                csvString = Encoding.UTF8.GetString(bytes);
+            }
+            else
+            {
+                csvString = File.ReadAllText(filePath + ".csv");
+            }
+
+            return csvString;
         }
 
         public override byte[] GetSongBytes(bool isPreview = false)
