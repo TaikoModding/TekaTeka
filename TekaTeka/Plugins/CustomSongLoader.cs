@@ -10,6 +10,11 @@ using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Cysharp.Threading.Tasks;
 using Il2CppInterop.Runtime;
 using Platform;
+using Scripts.OutGame.SongSelect;
+using Il2CppInterop.Runtime.InteropTypes;
+using System.ComponentModel;
+using UnityEngine;
+using System.Runtime.InteropServices;
 
 namespace TekaTeka.Plugins
 {
@@ -29,6 +34,13 @@ namespace TekaTeka.Plugins
         static ModdedSongsManager songsManager;
 
         static Scripts.UserData.MusicInfoEx[]? backup;
+        static Il2CppSystem.Action? saveDelegate, convertDelegate;
+
+        static Scripts.UserData.ApplicationUserDataSave? backupUserData;
+        static Func<Task> uiAction, saveAction;
+        static Il2CppSystem.Delegate uiDelegate;
+
+        static System.Threading.ReaderWriterLock saveLock = new();
 
         public static void InitializeLoader()
         {
@@ -51,7 +63,7 @@ namespace TekaTeka.Plugins
             Logger.Log(exception.GetStackTrace(true));
         }
 
-#region Append Custom Songs DB
+        #region Append Custom Songs DB
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(DataManager), nameof(DataManager.Awake))]
@@ -64,10 +76,9 @@ namespace TekaTeka.Plugins
             songsManager = new ModdedSongsManager();
         }
 
-#endregion
+        #endregion
 
-#region Custom Save Data
-
+        #region Custom Save Data
         [HarmonyPostfix]
         [HarmonyPatch(typeof(ApplicationUserDataSave), nameof(ApplicationUserDataSave.SaveAsync))]
         public static UniTask SaveAsync_Postfix(UniTask __result, ApplicationUserDataSave __instance)
@@ -82,6 +93,13 @@ namespace TekaTeka.Plugins
                 Logger.Log("Can't save mod data since supplied instance is null");
                 return __result;
             }
+            Logger.Log("Delaying SaveAsync call");
+            Logger.Log("Done delaying");
+            saveLock.AcquireWriterLock(1000);
+            // This is such a hack. Delay by a few hundred ms to give the UI thread time to do its thing
+            // and complete before we truncate user data.
+
+            Thread.Sleep(1000);
 
             var userData = __instance.Data;
             backup = new Scripts.UserData.MusicInfoEx[userData.MusicsData.Datas.Length];
@@ -89,23 +107,25 @@ namespace TekaTeka.Plugins
             userData = songsManager.FilterModdedData(userData);
             __instance.Data = userData;
 
-            Logger.Log($"SaveAsync intercepted, backed up {backup.Length} songs");
+            //Logger.Log($"SaveAsync intercepted, backed up {backup.Length} songs");
 
-            return __result.ContinueWith(DelegateSupport.ConvertDelegate < Il2CppSystem.Action>(() => {
+            return __result.ContinueWith(DelegateSupport.ConvertDelegate<Il2CppSystem.Action>(() => {
                 // Restore the musics data now that waiting is done.
-                var userData = __instance.Data;
-                Logger.Log("Delaying!");
-                //Thread.Sleep(10000);
-                Scripts.UserData.MusicInfoEx[] datas = userData.MusicsData.Datas;
-                Logger.Log($"datas size (pre): {datas.Length}");
-                Logger.Log($"backup size (pre): {backup.Length}");
-                Array.Resize(ref datas, backup.Length);
-                Logger.Log($"data size (post): {datas.Length}");
-                Logger.Log($"backup size (post): {backup.Length}");
-                Array.Copy(backup, 3000, datas, 3000, backup.Length - 3000);
-                userData.MusicsData.Datas = datas;
+                __instance.Data.MusicsData.Datas = backup;
+                var inst = __instance.Data;
+                PatchLoad(ref inst);
+                saveLock.ReleaseWriterLock();
                 Logger.Log($"SaveAsync completed, restored {userData.MusicsData.Datas.Count} from backup of {backup.Length} songs");
             }));
+        }
+
+        [HarmonyPatch]
+        [HarmonyPatch(typeof(MusicDataInterface), nameof(MusicDataInterface.LoadDataFromFile))]
+        [HarmonyPrefix]
+        public static bool LoadData_Pre(MusicDataInterface __instance)
+        {
+            Logger.Log($"LoadData pre: ${__instance.MusicInfoAccesserList.Count}");
+            return true;
         }
 
         [HarmonyPatch(typeof(MusicDataInterface))]
@@ -115,6 +135,7 @@ namespace TekaTeka.Plugins
         public static void MusicDataInterface_Reload_Postfix(MusicDataInterface __instance)
         {
             // The music data manager has been reset, so we need to publish the mod songs.
+            Logger.Log($"Reload post: ${__instance.MusicInfoAccesserList.Count}");
             songsManager.PublishSongs();
         }
 
@@ -130,8 +151,16 @@ namespace TekaTeka.Plugins
             SongMod? mod = songsManager.GetModFromId(musicinfo.Id);
             if (mod != null)
             {
-                Logger.Log($"Removing new song: {musicinfo.Id}: official ID: {musicinfo.UniqueId}");
-                mod.RemoveMod(musicinfo.Id, songsManager);
+                if (musicinfo.SubscriptionRegionList.Length != 0 || musicinfo.Reserve3 != "")
+                {
+                    Logger.Log($"Removing new song: {musicinfo.Id}: official ID: {musicinfo.UniqueId}");
+                    mod.RemoveMod(musicinfo.Id, songsManager);
+                }
+                else
+                {
+                    Logger.Log($"Ignoring deletion on DLC removed song: {musicinfo.Id} {musicinfo.UniqueId}");
+                    //mod.RemoveMod(musicinfo.Id, songsManager);
+                }
             }
             return true;
         }
@@ -156,7 +185,7 @@ namespace TekaTeka.Plugins
 
             Logger.Log($"PatchLoad started: old {oldLen} new {newLen}");
 
-            if (newLen > oldLen)
+            if (newLen >= oldLen)
             {
                 Array.Resize(ref newArray, newLen);
                 Array.Resize(ref newArray2, newLen);
@@ -209,9 +238,9 @@ namespace TekaTeka.Plugins
             Logger.Log("PatchLoad finished");
         }
 
-#endregion
+        #endregion
 
-#region Load Custom Chart
+        #region Load Custom Chart
 
         static IEnumerator emptyEnumerator()
         {
@@ -255,9 +284,9 @@ namespace TekaTeka.Plugins
             return false;
         }
 
-#endregion
+        #endregion
 
-#region Load Custom Practice Chart
+        #region Load Custom Practice Chart
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(FumenDivisionManager), nameof(FumenDivisionManager.Load))]
@@ -295,9 +324,9 @@ namespace TekaTeka.Plugins
             return false;
         }
 
-#endregion
+        #endregion
 
-#region Load Custom Song file
+        #region Load Custom Song file
 
         static IEnumerator CustomSongLoad(CriPlayer player)
         {
@@ -402,7 +431,6 @@ namespace TekaTeka.Plugins
 
             return false;
         }
-
-#endregion
     }
+#endregion
 }

@@ -33,7 +33,7 @@ namespace TekaTeka.Utils
             {
                 if (song.courses.ContainsKey(diff))
                 {
-                    fumenCourse = tja2fumen.Converters.ConvertTjaToFumen(song.courses[diff]);
+                    fumenCourse = tja2fumen.Converters.ConvertTjaToFumen(diff, song.courses[diff]);
                     shinuchiScores[i] = fumenCourse.shinuchiScore;
                     // All courses have the same initial BPM adjustment
                     this.songDelay = (60 / fumenCourse.measures[0].bpm * 1000) * 4;
@@ -133,7 +133,7 @@ namespace TekaTeka.Utils
             tja2fumen.FumenCourse? fumenCourse = null;
             if (tjaParsed.courses.ContainsKey(tjaDiff))
             {
-                fumenCourse = tja2fumen.Converters.ConvertTjaToFumen(tjaParsed.courses[tjaDiff]);
+                fumenCourse = tja2fumen.Converters.ConvertTjaToFumen(tjaDiff, tjaParsed.courses[tjaDiff]);
             }
             else
             {
@@ -142,7 +142,7 @@ namespace TekaTeka.Utils
                 {
                     if (tjaParsed.courses.ContainsKey(course))
                     {
-                        fumenCourse = tja2fumen.Converters.ConvertTjaToFumen(tjaParsed.courses[course]);
+                        fumenCourse = tja2fumen.Converters.ConvertTjaToFumen(course, tjaParsed.courses[course]);
                         break;
                     }
                 }

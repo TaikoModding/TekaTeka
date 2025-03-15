@@ -119,6 +119,12 @@ namespace TekaTeka.Utils
 
         public void FromMusicInfoEx(MusicsData musicsData, int uniqueId)
         {
+            if (uniqueId >= musicsData.Datas.Count)
+            {
+                // This can happen if a saved file is deleted. There's no data to modify anymore so just return
+                return;
+            }
+
             this.musicFlag = musicsData.Datas[uniqueId].MusicFlag;
             this.playCount = musicsData.Datas[uniqueId].playCount;
             this.usageOrder = musicsData.Datas[uniqueId].usageOrder;
