@@ -31,6 +31,7 @@ namespace TekaTeka.Utils
             }
             this.SetupMods();
             this.PublishSongs();
+            Logger.Log("ModdedSongsManager constructed");
         }
 
         public List<SongMod> GetMods()
@@ -86,7 +87,7 @@ namespace TekaTeka.Utils
                             TjaSongMod mod = new TjaSongMod(folder, 3000 + tjaSongs, genre);
                             if (mod.enabled)
                             {
-                                Logger.Log($"Mod {mod.name} Loaded", LogType.Info);
+                                Logger.Log($"TJA Mod {mod.name} Loaded", LogType.Info);
                                 mods.Add(mod);
                                 tjaSongs++;
                             }
@@ -125,6 +126,7 @@ namespace TekaTeka.Utils
 
         public void PublishSongs()
         {
+            Logger.Log($"PublishSongs: {musicInfos.Count} songs published");
             for (int i = 0; i < this.musicInfos.Count; i++)
             {
                 var tmp = this.musicInfos[i];
@@ -212,6 +214,7 @@ namespace TekaTeka.Utils
             UserFlagDataDefine.FlagData[] flags2 =
                 userData.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.TitleSongId];
 
+            /*
             Array.Resize(ref datas, 3000);
             Array.Resize(ref flags1, 3000);
             Array.Resize(ref flags2, 3000);
@@ -219,6 +222,28 @@ namespace TekaTeka.Utils
             userData.MusicsData.Datas = datas;
             userData.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.Song] = flags1;
             userData.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.TitleSongId] = flags2;
+            return userData;
+            */
+
+            Scripts.UserData.MusicInfoEx[] newDatas = new Scripts.UserData.MusicInfoEx[datas.Length];
+            Array.ConstrainedCopy(datas, 0, newDatas, 0, 3000);
+            Array.Resize(ref newDatas, 3000);
+            Logger.Log($"new data copy complete: {newDatas.Length}");
+
+            UserFlagDataDefine.FlagData[] newFlags1 = new UserFlagDataDefine.FlagData[flags1.Length];
+            Array.ConstrainedCopy(flags1, 0, newFlags1, 0, 3000);
+            Array.Resize(ref newFlags1, 3000);
+            Logger.Log($"flags1 copy complete: {newFlags1.Length}");
+
+            UserFlagDataDefine.FlagData[] newFlags2 = new UserFlagDataDefine.FlagData[flags2.Length];
+            Array.ConstrainedCopy(flags2, 0, newFlags2, 0, 3000);
+            Array.Resize(ref newFlags2, 3000);
+            Logger.Log($"flags2 copy complete: {newFlags2.Length}");
+
+            userData.MusicsData.Datas = newDatas;
+            Logger.Log($"flag data target: {userData.UserFlagData.userFlagData.Length}");
+            userData.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.Song] = newFlags1;
+            userData.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.TitleSongId] = newFlags2;
             return userData;
         }
     }

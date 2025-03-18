@@ -6,6 +6,15 @@ using TekaTeka.Utils;
 using Scripts.UserData;
 using Il2CppSystem.Security.Cryptography;
 using static MusicDataInterface;
+using Il2CppInterop.Runtime.InteropTypes.Arrays;
+using Cysharp.Threading.Tasks;
+using Il2CppInterop.Runtime;
+using Platform;
+using Scripts.OutGame.SongSelect;
+using Il2CppInterop.Runtime.InteropTypes;
+using System.ComponentModel;
+using UnityEngine;
+using System.Runtime.InteropServices;
 
 namespace TekaTeka.Plugins
 {
@@ -23,6 +32,15 @@ namespace TekaTeka.Plugins
         static CommonObjects commonObjects => TaikoSingletonMonoBehaviour<CommonObjects>.Instance;
 
         static ModdedSongsManager songsManager;
+
+        static Scripts.UserData.MusicInfoEx[]? backup;
+        static Il2CppSystem.Action? saveDelegate, convertDelegate;
+
+        static Scripts.UserData.ApplicationUserDataSave? backupUserData;
+        static Func<Task> uiAction, saveAction;
+        static Il2CppSystem.Delegate uiDelegate;
+
+        static System.Threading.ReaderWriterLock saveLock = new();
 
         public static void InitializeLoader()
         {
@@ -61,44 +79,56 @@ namespace TekaTeka.Plugins
 #endregion
 
 #region Custom Save Data
-
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(ApplicationUserDataSave._SaveAsync_d__21),
-                      nameof(ApplicationUserDataSave._SaveAsync_d__21.MoveNext))]
-        public static void PatchSave(ref ApplicationUserDataSave._SaveAsync_d__21 __instance)
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(ApplicationUserDataSave), nameof(ApplicationUserDataSave.SaveAsync))]
+        public static UniTask SaveAsync_Postfix(UniTask __result, ApplicationUserDataSave __instance)
         {
-            if (__instance.__1__state == 0)
+            // We implement mod saving as follows.
+            // Pre-save, we hide the music data so the game code doesn't see it.
+            // Run the unmodified save flow normally.
+            // After the task is completed, we continue with an Action to undo the hiding of the music data.
+
+            if (__instance == null)
             {
-                var userData = __instance.__4__this.data;
-
-                var backup = new Scripts.UserData.MusicInfoEx[userData.MusicsData.Datas.Length];
-
-                userData.MusicsData.Datas.CopyTo(backup, 0);
-                userData = songsManager.FilterModdedData(userData);
-
-                var xml = XmlSerializerBehaviour.Serializer(userData);
-
-                xml = Cryptgraphy.EncryptValueC(xml);
-
-                var dataSize = System.BitConverter.GetBytes(xml.Length);
-
-                var sha256Data = Cryptgraphy.GetHashByte<SHA256CryptoServiceProvider>(xml);
-
-                xml = Cryptgraphy.CompositData(dataSize, sha256Data, xml);
-
-                __instance._compositionData_5__2 = xml;
-
-                commonObjects.Platform.Save.SaveAsync(__instance._compositionData_5__2);
-
-                Scripts.UserData.MusicInfoEx[] datas = userData.MusicsData.Datas;
-                Array.Resize(ref datas, backup.Length);
-                Array.Copy(backup, 3000, datas, 3000, backup.Length - 3000);
-                userData.MusicsData.Datas = datas;
-
-                TaikoSingletonMonoBehaviour<SaveIcon>.Instance.Deactive();
-                __instance.__1__state = 2;
-                __instance._compositionData_5__2 = null;
+                Logger.Log("Can't save mod data since supplied instance is null");
+                return __result;
             }
+            Logger.Log("Delaying SaveAsync call");
+            Logger.Log("Done delaying");
+            saveLock.AcquireWriterLock(1000);
+            // This is such a hack. Delay by a few hundred ms to give the UI thread time to do its thing
+            // and complete before we truncate user data.
+
+            Thread.Sleep(1000);
+
+            var userData = __instance.Data;
+            backup = new Scripts.UserData.MusicInfoEx[userData.MusicsData.Datas.Length];
+            userData.MusicsData.Datas.CopyTo(backup, 0);
+            userData = songsManager.FilterModdedData(userData);
+            __instance.Data = userData;
+
+            // Logger.Log($"SaveAsync intercepted, backed up {backup.Length} songs");
+
+            return __result.ContinueWith(DelegateSupport.ConvertDelegate<Il2CppSystem.Action>(
+                () =>
+                {
+                    // Restore the musics data now that waiting is done.
+                    __instance.Data.MusicsData.Datas = backup;
+                    var inst = __instance.Data;
+                    PatchLoad(ref inst);
+                    saveLock.ReleaseWriterLock();
+                    Logger.Log(
+                        $"SaveAsync completed, restored {userData.MusicsData.Datas.Count} from backup of {backup.Length} songs");
+                }));
+        }
+
+        [HarmonyPatch]
+        [HarmonyPatch(typeof(MusicDataInterface), nameof(MusicDataInterface.LoadDataFromFile))]
+        [HarmonyPrefix]
+        public static bool LoadData_Pre(MusicDataInterface __instance)
+        {
+            Logger.Log($"LoadData pre: ${__instance.MusicInfoAccesserList.Count}");
+            return true;
         }
 
         [HarmonyPatch(typeof(MusicDataInterface))]
@@ -108,6 +138,7 @@ namespace TekaTeka.Plugins
         public static void MusicDataInterface_Reload_Postfix(MusicDataInterface __instance)
         {
             // The music data manager has been reset, so we need to publish the mod songs.
+            Logger.Log($"Reload post: ${__instance.MusicInfoAccesserList.Count}");
             songsManager.PublishSongs();
         }
 
@@ -123,8 +154,16 @@ namespace TekaTeka.Plugins
             SongMod? mod = songsManager.GetModFromId(musicinfo.Id);
             if (mod != null)
             {
-                Logger.Log($"Removing new song: {musicinfo.Id}: official ID: {musicinfo.UniqueId}");
-                mod.RemoveMod(musicinfo.Id, songsManager);
+                if (musicinfo.SubscriptionRegionList.Length != 0 || musicinfo.Reserve3 != "")
+                {
+                    Logger.Log($"Removing new song: {musicinfo.Id}: official ID: {musicinfo.UniqueId}");
+                    mod.RemoveMod(musicinfo.Id, songsManager);
+                }
+                else
+                {
+                    Logger.Log($"Ignoring deletion on DLC removed song: {musicinfo.Id} {musicinfo.UniqueId}");
+                    // mod.RemoveMod(musicinfo.Id, songsManager);
+                }
             }
             return true;
         }
@@ -133,9 +172,6 @@ namespace TekaTeka.Plugins
         [HarmonyPatch(typeof(Scripts.UserData.UserData), nameof(Scripts.UserData.UserData.FixData))]
         static void PatchLoad(ref Scripts.UserData.UserData __instance)
         {
-            int oldLen = __instance.MusicsData.Datas.Length;
-            int newLen = __instance.MusicsData.Datas.Length + songsManager.tjaSongs;
-
             Scripts.UserData.MusicInfoEx[] newArray = __instance.MusicsData.Datas;
             Scripts.UserData.MusicInfo2PEx[] newArray2 = Scripts.Scene.SceneDataExchanger.MusicData2P.Datas;
 
@@ -145,55 +181,64 @@ namespace TekaTeka.Plugins
                 __instance.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.TitleSongId]
                     .ToArray();
 
-            Array.Resize(ref newArray, newLen);
-            Array.Resize(ref newArray2, newLen);
-            Array.Resize(ref songArray, newLen);
-            Array.Resize(ref tittleSongArray, newLen);
-            for (int i = 3000; i < newLen; i++)
-            {
-                newArray[i] = new Scripts.UserData.MusicInfoEx();
-                newArray2[i] = new Scripts.UserData.MusicInfo2PEx();
+            Logger.Log($"songArray len: {songArray.Length} tittleSongArray len: {tittleSongArray.Length}");
 
-                newArray[i].SetDefault();
-                newArray2[i].SetDefault();
-            }
+            int oldLen = DataConst.MusicMax;
+            int newLen = DataConst.MusicMax + songsManager.tjaSongs;
 
-            foreach (SongMod mod in songsManager.modsEnabled)
+            Logger.Log($"PatchLoad started: old {oldLen} new {newLen}");
+
+            if (newLen >= oldLen)
             {
-                if (mod is TjaSongMod)
+                Array.Resize(ref newArray, newLen);
+                Array.Resize(ref newArray2, newLen);
+                Array.Resize(ref songArray, newLen);
+                Array.Resize(ref tittleSongArray, newLen);
+                for (int i = oldLen; i < newLen; i++)
                 {
-                    TjaSongMod tjaMod = (TjaSongMod)mod;
-                    int uniqueId = tjaMod.uniqueId;
-                    var musicData = __instance.MusicsData;
+                    newArray[i] = new Scripts.UserData.MusicInfoEx();
+                    newArray2[i] = new Scripts.UserData.MusicInfo2PEx();
 
-                    __instance.MusicsData = musicData;
-                    try
-                    {
-
-                        var musicInfo = tjaMod.LoadUserData();
-
-                        newArray[uniqueId] = musicInfo;
-                    }
-                    catch (Exception e)
-                    {
-                        var musicInfo = new Scripts.UserData.MusicInfoEx();
-                        musicInfo.SetDefault();
-                        newArray[uniqueId] = musicInfo;
-                    }
-
-                    songArray[uniqueId] =
-                        new Scripts.UserData.Flag.UserFlagDataDefine.FlagData() { Id = tjaMod.uniqueId };
-                    tittleSongArray[uniqueId] =
-                        new Scripts.UserData.Flag.UserFlagDataDefine.FlagData() { Id = tjaMod.uniqueId };
+                    newArray[i].SetDefault();
+                    newArray2[i].SetDefault();
                 }
+
+                foreach (SongMod mod in songsManager.modsEnabled)
+                {
+                    if (mod is TjaSongMod)
+                    {
+                        TjaSongMod tjaMod = (TjaSongMod)mod;
+                        int uniqueId = tjaMod.uniqueId;
+                        try
+                        {
+
+                            var musicInfo = tjaMod.LoadUserData();
+
+                            newArray[uniqueId] = musicInfo;
+                        }
+                        catch (Exception e)
+                        {
+                            var musicInfo = new Scripts.UserData.MusicInfoEx();
+                            musicInfo.SetDefault();
+                            newArray[uniqueId] = musicInfo;
+                        }
+
+                        songArray[uniqueId] =
+                            new Scripts.UserData.Flag.UserFlagDataDefine.FlagData() { Id = tjaMod.uniqueId };
+                        tittleSongArray[uniqueId] =
+                            new Scripts.UserData.Flag.UserFlagDataDefine.FlagData() { Id = tjaMod.uniqueId };
+                    }
+                }
+
+                __instance.MusicsData.Datas = newArray;
+                Scripts.Scene.SceneDataExchanger.MusicData2P.Datas = newArray2;
+
+                __instance.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.Song] = songArray;
+                __instance.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.TitleSongId] =
+                    tittleSongArray;
             }
 
-            __instance.MusicsData.Datas = newArray;
-            Scripts.Scene.SceneDataExchanger.MusicData2P.Datas = newArray2;
-
-            __instance.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.Song] = songArray;
-            __instance.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.TitleSongId] =
-                tittleSongArray;
+            Logger.Log("PatchLoad finished");
         }
 
 #endregion
@@ -375,7 +420,6 @@ namespace TekaTeka.Plugins
 
             return false;
         }
-
-#endregion
     }
+#endregion
 }
