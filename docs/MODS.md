@@ -114,7 +114,27 @@ Each Attribute is self-explanatory, but the most important are:
 
 - `UniqueId`: This is the unique numeric id of your song, this is mostly used for saves, make sure you don't reuse the same id or use an id from the original game
 - `Id`: This is the text id of your song, this will be used when searching for the fumen and fumencsv files(eg. `fumen/himyak_e.bin`)
+- `Order`: This is the order for the song library, where you can arrange the ordering for convenient organization.
+- `GenreNo`: Genre ID, where you can set any various custom charts into designated genres (0 = POP, 1 = Anime, 2 = VOCALOID, 3 = Variety, 4 = Children(Unused), 5 = Classical, 6 = Game Music, 7 = Namco Orignal)
+- `HasPreviewInPackage`: A boolean whether to play `P(SONGNAME.bin)` in your custom chart
+- `IsDefault`: Option to remove "DLC" tag in the rectangle and designate as a default chart
 - `SongFileName`: This is name of the song file you are gonna use, it's also used for the preview song file if `HasPreviewInPackage` is false, adding a `P` at the start of the name(eg. `SONG_HIMYAK` -> `PSONG_HIMYAK.bin`)
+- `IsDispJpSongName`: If your chart/song's name is written in English (eg. `Only my railgun` (written in English, and boolean is `false`), if `true`, it shows normally as `さいたま2000`)
+- `IsPS5ShareScreen`: Option to include audio in when recording gameplay in PS5 port of Rhythm Festival. (_due to DRM and licensing issues, PS5 removes audio when recording gameplay for copyright protection_)
+
+Difficulty Settings
+Legend (serving diffName as suffix):
+
+Difficulty (Maximum of star rating)
+- `Easy`: Easy (max. 5)
+- `Normal`: Normal (max. 7)
+- `Hard`: Hard (max. 8)
+- `Mania`: Extreme (max. 10)
+- `Ura` = Ura (same as `Mania`)
+
+- `Star(diffName)`: How many stars will you measure for each difficulty (maximum of 10)
+- `Shinuti(diffName)`: Shinuchi score value
+- `Shinuti(diffName)Duet`: Shinuchi score value when playing with 2 players
 
 ## Encrypted/Decrypted Priority
 

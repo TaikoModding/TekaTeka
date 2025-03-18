@@ -44,6 +44,7 @@ jobs:
           mkdir release
           mkdir ./release/RF.TekaTeka
           cp ./TekaTeka/bin/Release/net6.0/tja2fumen.dll ./release/RF.TekaTeka/tja2fumen.dll
+          cp ./TekaTeka/bin/Release/net6.0/tja2fumen.pdb ./release/tja2fumen.pdb
           cp ./TekaTeka/bin/Release/net6.0/RF.TekaTeka.dll ./release/RF.TekaTeka/RF.TekaTeka.dll
           cp ./TekaTeka/bin/Release/net6.0/RF.TekaTeka.pdb ./release/RF.TekaTeka.pdb
           cd ./release
@@ -71,4 +72,5 @@ jobs:
             `TODO`
           files: |
             ./release/RF.TekaTeka.zip
-            ./TekaTeka/bin/Release/net6.0/RF.TekaTeka.pdb
+            ./release/RF.TekaTeka.pdb
+            ./release/tja2fumen.pdb

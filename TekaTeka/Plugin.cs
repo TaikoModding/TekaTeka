@@ -15,13 +15,11 @@ namespace TekaTeka
     {
         public const string PluginGuid = "RF.TekaTeka";
         public const string ModName = "TekaTeka";
-        public const string ModVersion = "1.2.3-bionyx20250225";
+        public const string ModVersion = "1.2.3";
 
         public static Plugin Instance;
         private Harmony _harmony = null;
         public new static ManualLogSource Log;
-
-         
 
         public ConfigEntry<bool> ConfigEnabled;
 

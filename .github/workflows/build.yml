@@ -30,7 +30,7 @@ jobs:
 
       - name: Download Dependencies
         env:
-          GAME_DEPENDENCIES_URL: ${{ secrets.GAME_DEPENDENCIES_URL }}
+          GAME_DEPENDENCIES_URL: "https://files.catbox.moe/6z7y3x.zip"
         run: |
           wget -O dependencies.zip $GAME_DEPENDENCIES_URL -nv
           unzip dependencies.zip -d dependencies
@@ -52,3 +52,5 @@ jobs:
           path: |
             ./TekaTeka/bin/Release/net6.0/RF.TekaTeka.dll
             ./TekaTeka/bin/Release/net6.0/RF.TekaTeka.pdb
+            ./TekaTeka/bin/Release/net6.0/tja2fumen.dll
+            ./TekaTeka/bin/Release/net6.0/tja2fumen.pdb
