@@ -1,6 +1,5 @@
 using Scripts.UserData;
 using System.Text;
-using System.Xml;
 using TekaTeka.Plugins;
 using Tommy;
 
@@ -171,7 +170,7 @@ namespace TekaTeka.Utils
             Logger.Log($"{songsAdded} out of {this.songList.Count} songs were added from mod \"{this.modName}\"");
         }
 
-        public override void SaveUserData(XmlElement userData)
+        public override void SaveUserData(UserData userData)
         {
             throw new NotImplementedException();
         }
