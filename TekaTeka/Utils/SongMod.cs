@@ -1,16 +1,11 @@
 using Scripts.UserData;
-using System.Xml;
-using System.Xml.Serialization;
 
 namespace TekaTeka.Utils
 {
-#pragma warning disable 0649
     [Serializable]
-    [XmlRoot("MusicInfoEx")]
-    public struct CleanMusicInfoEx
+    internal struct CleanMusicInfoEx
     {
         [Serializable]
-        [XmlType("EnsoDonChanBandRecordInfo")]
         public struct CleanEnsoDonChanBandRecordInfo
         {
             public int bestFanValue;
@@ -19,7 +14,6 @@ namespace TekaTeka.Utils
         }
 
         [Serializable]
-        [XmlType("HiScoreRecordInfo")]
         public struct CleanHiScoreRecordInfo
         {
             public int score;
@@ -31,7 +25,6 @@ namespace TekaTeka.Utils
         }
 
         [Serializable]
-        [XmlType("EnsoRecordInfo")]
         public struct CleanEnsoRecordInfo
         {
             public bool allGood;
@@ -45,37 +38,34 @@ namespace TekaTeka.Utils
         }
 
         [Serializable]
-        [XmlType("EnsoWarRecordInfo")]
         public struct CleanEnsoWarRecordInfo
         {
             public int playCount;
             public int winCount;
         }
 
-        public EnsoDonChanBandRecordInfo donChanBandRecordInfo;
-        public MusicFlags MusicFlag;
-        public bool isBattleSong => (this.MusicFlag & MusicFlags.IsBattleSong) != 0;
-        public bool isDownloaded => (this.MusicFlag & MusicFlags.IsDownloaded) != 0;
-        public bool IsNew => (this.MusicFlag & MusicFlags.IsNew) != 0;
+        public CleanEnsoDonChanBandRecordInfo donChanBandRecordInfo;
+        public MusicFlags musicFlag;
+        public bool isBattleSong => (this.musicFlag | MusicFlags.IsBattleSong) != 0;
+        public bool isDownloaded => (this.musicFlag | MusicFlags.IsDownloaded) != 0;
+        public bool IsNew => (this.musicFlag | MusicFlags.IsNew) != 0;
 
-        public CleanEnsoRecordInfo[][] normalRecordInfo;
+        public CleanEnsoRecordInfo[] normalRecordInfo;
         public int playCount;
 
         public const MusicFlags playlistMask = MusicFlags.IsPlaylist1 | MusicFlags.IsPlaylist2 |
                                                MusicFlags.IsPlaylist3 | MusicFlags.IsPlaylist4 | MusicFlags.IsPlaylist5;
 
-        public bool isFavorite => (this.MusicFlag & playlistMask) != 0;
+        public bool isFavorite => (this.musicFlag | playlistMask) != 0;
         public int usageOrder;
         public CleanEnsoWarRecordInfo[] warRecordInfo;
-
-#pragma warning restore 0649
 
         public Scripts.UserData.MusicInfoEx ToMusicInfoEx()
         {
             Scripts.UserData.MusicInfoEx musicInfo = new Scripts.UserData.MusicInfoEx();
             musicInfo.SetDefault();
 
-            musicInfo.MusicFlag = this.MusicFlag;
+            musicInfo.MusicFlag = this.musicFlag;
             musicInfo.playCount = this.playCount;
             musicInfo.usageOrder = this.usageOrder;
 
@@ -87,7 +77,7 @@ namespace TekaTeka.Utils
             EnsoRecordInfo[] ensoRecordInfos = new EnsoRecordInfo[5];
             EnsoData.EnsoLevelType j = 0;
             int k = 0;
-            foreach (var record2 in this.normalRecordInfo[0])
+            foreach (var record2 in this.normalRecordInfo)
             {
 
                 var shinuchiHiScore = new HiScoreRecordInfo {
@@ -127,18 +117,57 @@ namespace TekaTeka.Utils
             return musicInfo;
         }
 
-        public void FromMusicInfoEx(XmlNode musicsData)
+        public void FromMusicInfoEx(MusicsData musicsData, int uniqueId)
         {
-            XmlSerializer serializer = new XmlSerializer(typeof(CleanMusicInfoEx));
+            this.musicFlag = musicsData.Datas[uniqueId].MusicFlag;
+            this.playCount = musicsData.Datas[uniqueId].playCount;
+            this.usageOrder = musicsData.Datas[uniqueId].usageOrder;
 
-            CleanMusicInfoEx ? result;
-            using (TextReader reader = new StringReader(musicsData.OuterXml))
+            this.donChanBandRecordInfo = new CleanEnsoDonChanBandRecordInfo {
+                bestFanValue = musicsData.Datas[uniqueId].donChanBandRecordInfo.bestFanValue,
+                clearCount = musicsData.Datas[uniqueId].donChanBandRecordInfo.clearCount,
+                playCount = musicsData.Datas[uniqueId].donChanBandRecordInfo.playCount
+            };
+
+            this.normalRecordInfo = new CleanEnsoRecordInfo[5];
+            for (EnsoData.EnsoLevelType i = 0; i < EnsoData.EnsoLevelType.Num; i++)
             {
-                result = (CleanMusicInfoEx?)serializer.Deserialize(reader);
+                EnsoRecordInfo record;
+                musicsData.GetNormalRecordInfo(uniqueId, i, out record);
+                this.normalRecordInfo[(int)i] =
+                    new CleanEnsoRecordInfo { allGood = record.allGood,
+                                              cleared = record.cleared,
+                                              crown = record.crown,
+                                              ensoGamePlayCount = record.ensoGamePlayCount,
+                                              normalHiScore =
+                                                  new CleanHiScoreRecordInfo {
+                                                      bad = record.normalHiScore.bad,
+                                                      combo = record.normalHiScore.combo,
+                                                      excellent = record.normalHiScore.excellent,
+                                                      good = record.normalHiScore.good,
+                                                      renda = record.normalHiScore.renda,
+                                                      score = record.normalHiScore.score,
+                                                  },
+                                              playCount = record.playCount,
+                                              shinuchiHiScore =
+                                                  new CleanHiScoreRecordInfo {
+                                                      bad = record.shinuchiHiScore.bad,
+                                                      combo = record.shinuchiHiScore.combo,
+                                                      excellent = record.shinuchiHiScore.excellent,
+                                                      good = record.shinuchiHiScore.good,
+                                                      renda = record.shinuchiHiScore.renda,
+                                                      score = record.shinuchiHiScore.score,
+                                                  },
+                                              trainingPlayCount = record.trainingPlayCount };
             }
-            if (result != null)
+
+            this.warRecordInfo = new CleanEnsoWarRecordInfo[(int)EnsoData.WarPlayMode.Num];
+            for (EnsoData.WarPlayMode i = 0; i < EnsoData.WarPlayMode.Num; i++)
             {
-                this = (CleanMusicInfoEx)result;
+                EnsoWarRecordInfo warRecord;
+                musicsData.GetWarRecordInfo(uniqueId, i, out warRecord);
+                this.warRecordInfo[(int)i] =
+                    new CleanEnsoWarRecordInfo { playCount = warRecord.playCount, winCount = warRecord.winCount };
             }
         }
     }
@@ -160,7 +189,7 @@ namespace TekaTeka.Utils
 
         public abstract SongEntry GetSongEntry(string id, bool idIsSongFile = false);
 
-        public abstract void SaveUserData(XmlElement userData);
+        public abstract void SaveUserData(UserData userData);
 
         public abstract Scripts.UserData.MusicInfoEx LoadUserData();
     }

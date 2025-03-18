@@ -1,6 +1,5 @@
 using Scripts.UserData;
 using Scripts.UserData.Flag;
-using System.Xml;
 using TekaTeka.Plugins;
 
 namespace TekaTeka.Utils
@@ -196,7 +195,7 @@ namespace TekaTeka.Utils
             return this.songFileToMod[songFile];
         }
 
-        public XmlElement FilterModdedData(XmlElement userData)
+        public UserData FilterModdedData(UserData userData)
         {
 
             foreach (SongMod mod in this.modsEnabled)
@@ -207,35 +206,19 @@ namespace TekaTeka.Utils
                 }
             }
 
-            int nodeCount = userData["MusicsData"]?["Datas"]?.ChildNodes.Count ?? 0;
-            for (int i = nodeCount; i >= 3000; i--)
-            {
-                var data = userData["MusicsData"]?["Datas"]?.ChildNodes[i];
-                if (data != null)
-                {
-                    userData["MusicsData"]?["Datas"]?.RemoveChild(data);
-                }
+            Scripts.UserData.MusicInfoEx[] datas = userData.MusicsData.Datas;
+            UserFlagDataDefine.FlagData[] flags1 =
+                userData.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.Song];
+            UserFlagDataDefine.FlagData[] flags2 =
+                userData.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.TitleSongId];
 
-                data = userData["UserFlagData"]?["userFlagData"]
-                           ?.ChildNodes[(int)UserFlagData.FlagType.Song]
-                           ?.ChildNodes[i];
-                if (data != null)
-                {
-                    userData["UserFlagData"]?["userFlagData"]?.ChildNodes[(int)UserFlagData.FlagType.Song]?.RemoveChild(
-                        data);
-                }
+            Array.Resize(ref datas, 3000);
+            Array.Resize(ref flags1, 3000);
+            Array.Resize(ref flags2, 3000);
 
-                data = userData["UserFlagData"]?["userFlagData"]
-                           ?.ChildNodes[(int)UserFlagData.FlagType.TitleSongId]
-                           ?.ChildNodes[i];
-                if (data != null)
-                {
-                    userData["UserFlagData"]?["userFlagData"]
-                        ?.ChildNodes[(int)UserFlagData.FlagType.TitleSongId]
-                        ?.RemoveChild(data);
-                }
-            }
-
+            userData.MusicsData.Datas = datas;
+            userData.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.Song] = flags1;
+            userData.UserFlagData.userFlagData[(int)Scripts.UserData.Flag.UserFlagData.FlagType.TitleSongId] = flags2;
             return userData;
         }
     }
