@@ -63,7 +63,7 @@ namespace TekaTeka.Plugins
             Logger.Log(exception.GetStackTrace(true));
         }
 
-        #region Append Custom Songs DB
+#region Append Custom Songs DB
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(DataManager), nameof(DataManager.Awake))]
@@ -76,9 +76,9 @@ namespace TekaTeka.Plugins
             songsManager = new ModdedSongsManager();
         }
 
-        #endregion
+#endregion
 
-        #region Custom Save Data
+#region Custom Save Data
         [HarmonyPostfix]
         [HarmonyPatch(typeof(ApplicationUserDataSave), nameof(ApplicationUserDataSave.SaveAsync))]
         public static UniTask SaveAsync_Postfix(UniTask __result, ApplicationUserDataSave __instance)
@@ -107,16 +107,19 @@ namespace TekaTeka.Plugins
             userData = songsManager.FilterModdedData(userData);
             __instance.Data = userData;
 
-            //Logger.Log($"SaveAsync intercepted, backed up {backup.Length} songs");
+            // Logger.Log($"SaveAsync intercepted, backed up {backup.Length} songs");
 
-            return __result.ContinueWith(DelegateSupport.ConvertDelegate<Il2CppSystem.Action>(() => {
-                // Restore the musics data now that waiting is done.
-                __instance.Data.MusicsData.Datas = backup;
-                var inst = __instance.Data;
-                PatchLoad(ref inst);
-                saveLock.ReleaseWriterLock();
-                Logger.Log($"SaveAsync completed, restored {userData.MusicsData.Datas.Count} from backup of {backup.Length} songs");
-            }));
+            return __result.ContinueWith(DelegateSupport.ConvertDelegate<Il2CppSystem.Action>(
+                () =>
+                {
+                    // Restore the musics data now that waiting is done.
+                    __instance.Data.MusicsData.Datas = backup;
+                    var inst = __instance.Data;
+                    PatchLoad(ref inst);
+                    saveLock.ReleaseWriterLock();
+                    Logger.Log(
+                        $"SaveAsync completed, restored {userData.MusicsData.Datas.Count} from backup of {backup.Length} songs");
+                }));
         }
 
         [HarmonyPatch]
@@ -159,7 +162,7 @@ namespace TekaTeka.Plugins
                 else
                 {
                     Logger.Log($"Ignoring deletion on DLC removed song: {musicinfo.Id} {musicinfo.UniqueId}");
-                    //mod.RemoveMod(musicinfo.Id, songsManager);
+                    // mod.RemoveMod(musicinfo.Id, songsManager);
                 }
             }
             return true;
@@ -238,9 +241,9 @@ namespace TekaTeka.Plugins
             Logger.Log("PatchLoad finished");
         }
 
-        #endregion
+#endregion
 
-        #region Load Custom Chart
+#region Load Custom Chart
 
         static IEnumerator emptyEnumerator()
         {
@@ -284,9 +287,9 @@ namespace TekaTeka.Plugins
             return false;
         }
 
-        #endregion
+#endregion
 
-        #region Load Custom Practice Chart
+#region Load Custom Practice Chart
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(FumenDivisionManager), nameof(FumenDivisionManager.Load))]
@@ -324,9 +327,9 @@ namespace TekaTeka.Plugins
             return false;
         }
 
-        #endregion
+#endregion
 
-        #region Load Custom Song file
+#region Load Custom Song file
 
         static IEnumerator CustomSongLoad(CriPlayer player)
         {
