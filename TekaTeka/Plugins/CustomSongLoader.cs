@@ -183,8 +183,8 @@ namespace TekaTeka.Plugins
 
             Logger.Log($"songArray len: {songArray.Length} tittleSongArray len: {tittleSongArray.Length}");
 
-            int oldLen = songArray.Length;
-            int newLen = __instance.MusicsData.Datas.Length;
+            int oldLen = DataConst.MusicMax;
+            int newLen = DataConst.MusicMax + songsManager.tjaSongs;
 
             Logger.Log($"PatchLoad started: old {oldLen} new {newLen}");
 
@@ -194,7 +194,7 @@ namespace TekaTeka.Plugins
                 Array.Resize(ref newArray2, newLen);
                 Array.Resize(ref songArray, newLen);
                 Array.Resize(ref tittleSongArray, newLen);
-                for (int i = 3000; i < newLen; i++)
+                for (int i = oldLen; i < newLen; i++)
                 {
                     newArray[i] = new Scripts.UserData.MusicInfoEx();
                     newArray2[i] = new Scripts.UserData.MusicInfo2PEx();
