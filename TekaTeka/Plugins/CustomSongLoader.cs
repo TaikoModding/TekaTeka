@@ -79,6 +79,31 @@ namespace TekaTeka.Plugins
 #endregion
 
 #region Custom Save Data
+        private static async Task SaveAsync_Override(UniTask original, ApplicationUserDataSave __instance)
+        {
+            saveLock.AcquireWriterLock(1000);
+            
+            var userData = __instance.Data;
+            backup = new Scripts.UserData.MusicInfoEx[userData.MusicsData.Datas.Length];
+            userData.MusicsData.Datas.CopyTo(backup, 0);
+            userData = songsManager.FilterModdedData(userData);
+            __instance.Data = userData;
+
+            // This is such a hack. Delay by a few hundred ms to give the UI thread time to do its thing
+            // and complete before we truncate user data.
+            // await UniTask.Delay(1000).ToTask();
+            
+            await original.ToTask();
+            
+            // Restore the musics data now that waiting is done.
+            __instance.Data.MusicsData.Datas = backup;
+            var inst = __instance.Data;
+            PatchLoad(ref inst);
+            saveLock.ReleaseWriterLock();
+            Logger.Log(
+                $"SaveAsync completed, restored {userData.MusicsData.Datas.Count} from backup of {backup.Length} songs");
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch(typeof(ApplicationUserDataSave), nameof(ApplicationUserDataSave.SaveAsync))]
         public static UniTask SaveAsync_Postfix(UniTask __result, ApplicationUserDataSave __instance)
@@ -93,33 +118,8 @@ namespace TekaTeka.Plugins
                 Logger.Log("Can't save mod data since supplied instance is null");
                 return __result;
             }
-            Logger.Log("Delaying SaveAsync call");
-            Logger.Log("Done delaying");
-            saveLock.AcquireWriterLock(1000);
-            // This is such a hack. Delay by a few hundred ms to give the UI thread time to do its thing
-            // and complete before we truncate user data.
-
-            Thread.Sleep(1000);
-
-            var userData = __instance.Data;
-            backup = new Scripts.UserData.MusicInfoEx[userData.MusicsData.Datas.Length];
-            userData.MusicsData.Datas.CopyTo(backup, 0);
-            userData = songsManager.FilterModdedData(userData);
-            __instance.Data = userData;
-
-            // Logger.Log($"SaveAsync intercepted, backed up {backup.Length} songs");
-
-            return __result.ContinueWith(DelegateSupport.ConvertDelegate<Il2CppSystem.Action>(
-                () =>
-                {
-                    // Restore the musics data now that waiting is done.
-                    __instance.Data.MusicsData.Datas = backup;
-                    var inst = __instance.Data;
-                    PatchLoad(ref inst);
-                    saveLock.ReleaseWriterLock();
-                    Logger.Log(
-                        $"SaveAsync completed, restored {userData.MusicsData.Datas.Count} from backup of {backup.Length} songs");
-                }));
+            
+            return SaveAsync_Override(__result, __instance).ToUniTask();
         }
 
         [HarmonyPatch]
