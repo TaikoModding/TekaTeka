@@ -29,7 +29,7 @@ namespace TekaTeka.Utils
         Genre genre;
 
         string modFolderPath =>
-            Path.Combine(CustomSongLoader.songsPath, "TJAsongs", GenreFolders[(int)this.genre], this.name);
+            Path.Combine(CustomSongLoader.songsPath, "TJAsongs", GenreFolders[(int)this.genre], this.modFolder);
 
         string tjaPath => Path.Combine(this.modFolderPath, this.name + ".tja");
         string savesPath => Path.Combine(this.modFolderPath, "saves.json");
@@ -41,9 +41,19 @@ namespace TekaTeka.Utils
             this.modFolder = folder;
             this.genre = genre;
             this.enabled = true;
-            this.name = folder;
             this.uniqueId = id;
             this.modPath = modFolderPath;
+
+            string? fileName = this.GetFirstTjaFile();
+            if (fileName == null)
+            {
+#if DEBUG
+                Logger.Log($"TJA not found in mod {this.modFolderPath}. Skipping...", LogType.Warning);
+#endif
+                this.enabled = false;
+                return;
+            }
+            this.name = fileName;
 
             StreamReader configToml;
             TomlTable? table = null;
@@ -89,7 +99,24 @@ namespace TekaTeka.Utils
                 return;
             }
 
-            this.song = new TjaSongEntry(this.modFolder, id, genre);
+            this.song = new TjaSongEntry(this.modFolder, this.name, id, genre);
+        }
+
+        private string? GetFirstTjaFile()
+        {
+            string defaultPath = Path.Combine(this.modFolderPath, this.modFolder + ".tja");
+            if (File.Exists(defaultPath))
+            {
+                return this.modFolder;
+            }
+
+            string? firstOccurrence = Directory.EnumerateFiles(this.modFolderPath, "*.tja").FirstOrDefault();
+
+            if (firstOccurrence != null)
+            {
+                return Path.GetFileNameWithoutExtension(firstOccurrence);
+            }
+            return null;
         }
 
         public override bool IsValidMod()

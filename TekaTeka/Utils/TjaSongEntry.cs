@@ -11,19 +11,21 @@ namespace TekaTeka.Utils
 
         tja2fumen.TJASong song;
         TjaSongMod.Genre genre;
+        string tjaFilename = "";
 
         string modFolderPath => Path.Combine(CustomSongLoader.songsPath, "TJAsongs",
                                              TjaSongMod.GenreFolders[(int)this.genre], this.modFolder);
 
-        string tjaPath => Path.Combine(this.modFolderPath, this.modFolder + ".tja");
+        string tjaPath => Path.Combine(this.modFolderPath, this.tjaFilename + ".tja");
         string savesPath => Path.Combine(this.modFolderPath, "saves.json");
 
         string wavePath => Path.Combine(this.modFolderPath, this.GetWaveName());
 
-        public TjaSongEntry(string modFolder, int id, TjaSongMod.Genre genre)
+        public TjaSongEntry(string modFolder, string tjaFile, int id, TjaSongMod.Genre genre)
         {
             this.modFolder = modFolder;
             this.genre = genre;
+            this.tjaFilename = tjaFile;
             this.modPath = modFolderPath;
             song = tja2fumen.Parsers.ParseTja(this.tjaPath);
             tja2fumen.FumenCourse? fumenCourse = null;
